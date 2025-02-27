@@ -1,2 +1,2 @@
 # Landing-Planes-JSBSim
-trying not to crash
+We try to have planes not crash in JSBSim using RL
