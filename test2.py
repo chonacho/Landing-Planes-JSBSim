@@ -1,10 +1,9 @@
 import jsbgym
 import gymnasium as gym
-import os
-from jsbgym import visualiser
-import logging
 
 # Weird necessary fix
+from jsbgym import visualiser
+import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
