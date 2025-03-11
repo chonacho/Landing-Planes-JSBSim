@@ -6,7 +6,6 @@ from jsbgym.aircraft import Aircraft, c172
 
 
 
-
 def get_env_id(aircraft, task_type, shaping, enable_flightgear) -> str:
     """
     Creates an env ID from the environment's components
@@ -50,26 +49,28 @@ class AttributeFormatter(object):
     @staticmethod
     def translate(string: str):
         return string.translate(AttributeFormatter.TRANSLATION_TABLE)
-for env_id, (
-    plane,
-    task,
-    shaping,
-    enable_flightgear,
-) in get_env_id_kwargs_map().items():
-    if enable_flightgear:
-        entry_point = "jsbgym.environment:JsbSimEnv"
-    else:
-        entry_point = "jsbgym.environment:NoFGJsbSimEnv"
-    kwargs = dict(aircraft=plane, task_type=task, shaping=shaping)
-    gym.envs.registration.register(id=env_id, entry_point=entry_point, kwargs=kwargs)
-
-# make an Enum storing every Gym-JSBSim environment ID for convenience and value safety
-Envs = enum.Enum.__call__(
-    "Envs",
-    [
-        (AttributeFormatter.translate(env_id), env_id)
-        for env_id in get_env_id_kwargs_map().keys()
-    ],
-)
-print(get_env_id_kwargs_map().keys())
-
+def main():
+    for env_id, (
+        plane,
+        task,
+        shaping,
+        enable_flightgear,
+    ) in get_env_id_kwargs_map().items():
+        if enable_flightgear:
+            entry_point = "jsbgym.environment:JsbSimEnv"
+        else:
+            entry_point = "jsbgym.environment:NoFGJsbSimEnv"
+        kwargs = dict(aircraft=plane, task_type=task, shaping=shaping)
+        gym.envs.registration.register(id=env_id, entry_point=entry_point, kwargs=kwargs)
+    
+    # make an Enum storing every Gym-JSBSim environment ID for convenience and value safety
+    Envs = enum.Enum.__call__(
+        "Envs",
+        [
+            (AttributeFormatter.translate(env_id), env_id)
+            for env_id in get_env_id_kwargs_map().keys()
+        ],
+    )
+    print(get_env_id_kwargs_map().keys())
+if __name__ == '__main__':
+    main()

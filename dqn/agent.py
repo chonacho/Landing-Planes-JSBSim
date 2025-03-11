@@ -65,6 +65,8 @@ class DQNAgent:
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             q_values = self.policy_net(state_tensor)
             action = q_values.cpu().data.numpy()[0]
+            c = np.clip(action,-1,1)
+            if not np.array_equal(c, [-1, 1, 1]): print(c)
             return np.clip(action, -1, 1)
 
     def replay(self):
@@ -109,7 +111,7 @@ class DQNAgent:
         return filename
 
     def load(self, checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+        checkpoint = torch.load(checkpoint_path,map_location=torch.device('cpu'))
         self.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
         self.target_net.load_state_dict(checkpoint['target_net_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
