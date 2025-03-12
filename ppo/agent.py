@@ -65,25 +65,22 @@ policy_kwargs = dict(
     activation_fn=nn.ReLU,
 )
 
-callback = TrainAndLoggingCallback(check_freq=10000, save_path=CHECKPOINT_DIR)
+callback = TrainAndLoggingCallback(check_freq=100000, save_path=CHECKPOINT_DIR)
 
 model = PPO(
     "MlpPolicy",
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,
-    learning_rate=3e-4,
-    n_steps=2048,
-    batch_size=64,
-    n_epochs=10,
+    learning_rate=1e-2,
     gamma=0.99,
     gae_lambda=0.95,
-    clip_range=0.2,
+    clip_range=0.05,
     ent_coef=0.01,
     verbose=1
 )
 
-model.learn(total_timesteps=500000, callback=callback, progress_bar=True, log_interval=10000)
+model.learn(total_timesteps=500000, callback=callback, progress_bar=True, log_interval=100000)
 model.save("model")
 
 print("done")
