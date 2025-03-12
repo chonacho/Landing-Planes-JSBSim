@@ -40,7 +40,7 @@ class TrainAndLoggingCallback(BaseCallback):
 
 callback = TrainAndLoggingCallback(check_freq=10000, save_path=CHECKPOINT_DIR)
 model = PPO("MlpPolicy", env, tensorboard_log=LOG_DIR, ent_coef=0.1, learning_rate=0.0001, gamma=0.999, verbose=1)
-model.learn(total_timesteps=100000, callback=callback, progress_bar=True, log_interval=10000)
+model.learn(total_timesteps=1000000, callback=callback, progress_bar=True, log_interval=10000)
 model.save("model")
 
 print("done")
