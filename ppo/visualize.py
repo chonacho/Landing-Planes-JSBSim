@@ -20,7 +20,7 @@ visualiser.gym.logger = logging.getLogger('jsbgym')
 env = gym.make("C172-LandingTask-Shaping.STANDARD-FG-v0", render_mode="flightgear")
 
 env.reset()
-model=PPO.load(os.path.join("train", "best_model_10000"))
+model=PPO.load(os.path.join("train", "model"))
 env.render()
 for episode in range(1, 6):
     obs, _ = env.reset()
