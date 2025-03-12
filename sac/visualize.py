@@ -13,7 +13,7 @@ from jsbgym import visualiser
 import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
-env = gym.make("C172-HeadingControlTask-Shaping.STANDARD-NoFG-v0", render_mode="graph")
+env = gym.make("C172-HeadingControlTask-Shaping.STANDARD-FG-v0", render_mode="flightgear")
 
 env.reset()
 model=SAC.load(os.path.join("train", "best_model_20000"))
