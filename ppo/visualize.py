@@ -7,7 +7,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
 import gym_make
-from tasks import LandingTask
+from tasks import AltitudeTask
 gym_make.main()
 
 # Weird necessary fix
@@ -16,7 +16,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-HeadingControlTask-Shaping.STANDARD-FG-v0", render_mode="flightgear")
+env = gym.make("C172-AltitudeTask-Shaping.STANDARD-FG-v0", render_mode="flightgear")
 
 env.reset()
 model = PPO.load("model")

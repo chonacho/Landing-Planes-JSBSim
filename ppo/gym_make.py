@@ -23,10 +23,10 @@ def get_env_id_kwargs_map() -> Dict[str, Tuple]:
     """Returns all environment IDs mapped to tuple of (task, aircraft, shaping, flightgear)"""
     # lazy import to avoid circular dependencies
     from jsbgym.tasks import Shaping, HeadingControlTask, TurnHeadingControlTask
-    from tasks import LandingTask
+    from tasks import LandingTask, AltitudeTask
 
     map = {}
-    for task_type in [LandingTask]:
+    for task_type in [LandingTask, AltitudeTask]:
         for plane in [c172]:
             for shaping in (Shaping.STANDARD, Shaping.EXTRA, Shaping.EXTRA_SEQUENTIAL):
                 for enable_flightgear in (True, False):
@@ -62,7 +62,7 @@ def main():
             entry_point = "jsbgym.environment:NoFGJsbSimEnv"
         kwargs = dict(aircraft=plane, task_type=task, shaping=shaping)
         gym.envs.registration.register(id=env_id, entry_point=entry_point, kwargs=kwargs)
-    
+
     # make an Enum storing every Gym-JSBSim environment ID for convenience and value safety
     Envs = enum.Enum.__call__(
         "Envs",

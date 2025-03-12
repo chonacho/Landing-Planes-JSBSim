@@ -236,10 +236,184 @@ class LandingTask(FlightTask):
             prp.u_fps,
             prp.altitude_sl_ft,
             self.altitude_error_ft,
-            self.target_track_deg,
             self.track_error_deg,
             prp.roll_rad,
             prp.sideslip_deg,
+            self.last_agent_reward,
+            self.last_assessment_reward,
+            self.steps_left,
+        )
+
+class AltitudeTask(FlightTask):
+    """
+    A task in which the agent must maintain a constant altitude.
+    """
+
+    THROTTLE_CMD = 0.8
+    MIXTURE_CMD = 0.8
+    DEFAULT_EPISODE_TIME_S = 60.0
+    ALTITUDE_SCALING_FT = 150
+    MIN_STATE_QUALITY = 0.0  # terminate if state 'quality' is less than this
+    MAX_ALTITUDE_DEVIATION_FT = 1000  # terminate if altitude error exceeds this
+
+    altitude_error_ft = BoundedProperty(
+        "error/altitude-error-ft",
+        "error to desired altitude [ft]",
+        prp.altitude_sl_ft.min,
+        prp.altitude_sl_ft.max,
+    )
+    action_variables = (prp.elevator_cmd, prp.throttle_cmd)
+
+    def __init__(
+        self,
+        shaping_type: Shaping,
+        step_frequency_hz: float,
+        aircraft: Aircraft,
+        episode_time_s: float = DEFAULT_EPISODE_TIME_S,
+        positive_rewards: bool = True,
+    ):
+        """
+        Constructor.
+
+        :param step_frequency_hz: the number of agent interaction steps per second
+        :param aircraft: the aircraft used in the simulation
+        """
+        self.max_time_s = episode_time_s
+        episode_steps = math.ceil(self.max_time_s * step_frequency_hz)
+        self.steps_left = BoundedProperty(
+            "info/steps_left", "steps remaining in episode", 0, episode_steps
+        )
+        self.aircraft = aircraft
+        self.extra_state_variables = (self.altitude_error_ft,)
+        self.state_variables = (
+            FlightTask.base_state_variables + self.extra_state_variables
+        )
+        self.positive_rewards = positive_rewards
+        assessor = self.make_assessor(shaping_type)
+        super().__init__(assessor)
+
+    def make_assessor(self, shaping: Shaping) -> assessors.AssessorImpl:
+        base_components = self._make_base_reward_components()
+        shaping_components = ()
+        return self._select_assessor(base_components, shaping_components, shaping)
+
+    def _make_base_reward_components(self) -> Tuple[rewards.RewardComponent, ...]:
+        base_components = (
+            rewards.AsymptoticErrorComponent(
+                name="altitude_error",
+                prop=self.altitude_error_ft,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=False,
+                scaling_factor=self.ALTITUDE_SCALING_FT,
+            ),
+        )
+        return base_components
+
+    def _select_assessor(
+        self,
+        base_components: Tuple[rewards.RewardComponent, ...],
+        shaping_components: Tuple[rewards.RewardComponent, ...],
+        shaping: Shaping,
+    ) -> assessors.AssessorImpl:
+        if shaping is Shaping.STANDARD:
+            return assessors.AssessorImpl(
+                base_components,
+                shaping_components,
+                positive_rewards=self.positive_rewards,
+            )
+        else:
+            pitch_stability = rewards.AsymptoticErrorComponent(
+                name="pitch_stability",
+                prop=prp.pitch_rad,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=True,
+                scaling_factor=0.15,  # approx 8 deg
+            )
+            potential_based_components = (pitch_stability,)
+
+            if shaping is Shaping.EXTRA:
+                return assessors.AssessorImpl(
+                    base_components,
+                    potential_based_components,
+                    positive_rewards=self.positive_rewards,
+                )
+            elif shaping is Shaping.EXTRA_SEQUENTIAL:
+                altitude_error = base_components[0]
+                dependency_map = {pitch_stability: (altitude_error,)}
+                return assessors.ContinuousSequentialAssessor(
+                    base_components,
+                    potential_based_components,
+                    potential_dependency_map=dependency_map,
+                    positive_rewards=self.positive_rewards,
+                )
+
+    def get_initial_conditions(self) -> Dict[Property, float]:
+        extra_conditions = {
+            prp.initial_u_fps: self.aircraft.get_cruise_speed_fps(),
+            prp.initial_v_fps: 0,
+            prp.initial_w_fps: 0,
+            prp.initial_p_radps: 0,
+            prp.initial_q_radps: 0,
+            prp.initial_r_radps: 0,
+            prp.initial_roc_fpm: 0,
+        }
+        return {**self.base_initial_conditions, **extra_conditions}
+
+    def _update_custom_properties(self, sim: Simulation) -> None:
+        self._update_altitude_error(sim)
+        self._decrement_steps_left(sim)
+
+    def _update_altitude_error(self, sim: Simulation):
+        altitude_ft = sim[prp.altitude_sl_ft]
+        target_altitude_ft = self._get_target_altitude()
+        error_ft = altitude_ft - target_altitude_ft
+        sim[self.altitude_error_ft] = error_ft
+
+    def _decrement_steps_left(self, sim: Simulation):
+        sim[self.steps_left] -= 1
+
+    def _is_terminal(self, sim: Simulation) -> bool:
+        terminal_step = sim[self.steps_left] <= 0
+        state_quality = sim[self.last_assessment_reward]
+        state_out_of_bounds = state_quality < self.MIN_STATE_QUALITY
+        return terminal_step or state_out_of_bounds or self._altitude_out_of_bounds(sim)
+
+    def _altitude_out_of_bounds(self, sim: Simulation) -> bool:
+        altitude_error_ft = sim[self.altitude_error_ft]
+        return abs(altitude_error_ft) > self.MAX_ALTITUDE_DEVIATION_FT
+
+    def _get_out_of_bounds_reward(self, sim: Simulation) -> rewards.Reward:
+        """
+        if aircraft is out of bounds, we give the largest possible negative reward:
+        as if this timestep, and every remaining timestep in the episode was -1.
+        """
+        reward_scalar = (1 + sim[self.steps_left]) * -1.0
+        return RewardStub(reward_scalar, reward_scalar)
+
+    def _reward_terminal_override(
+        self, reward: rewards.Reward, sim: Simulation
+    ) -> rewards.Reward:
+        if self._altitude_out_of_bounds(sim) and not self.positive_rewards:
+            return self._get_out_of_bounds_reward(sim)
+        else:
+            return reward
+
+    def _new_episode_init(self, sim: Simulation) -> None:
+        super()._new_episode_init(sim)
+        sim.set_throttle_mixture_controls(self.THROTTLE_CMD, self.MIXTURE_CMD)
+        sim[self.steps_left] = self.steps_left.max
+
+    def _get_target_altitude(self) -> float:
+        return self.INITIAL_ALTITUDE_FT
+
+    def get_props_to_output(self) -> Tuple:
+        return (
+            prp.u_fps,
+            prp.altitude_sl_ft,
+            self.altitude_error_ft,
+            prp.pitch_rad,
             self.last_agent_reward,
             self.last_assessment_reward,
             self.steps_left,
