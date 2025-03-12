@@ -11,9 +11,10 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-#import gym_make
-#from tasks import LandingTask
-#gym_make.main()
+
+from tasks import *
+import gym_make
+gym_make.main()
 
 class CustomNetwork(BaseFeaturesExtractor):
     def __init__(self, observation_space, features_dim=256):
@@ -33,7 +34,7 @@ class CustomNetwork(BaseFeaturesExtractor):
         return self.net(observations)
 
 
-env = gym.make("C172-HeadingControlTask-Shaping.STANDARD-NoFG-v0")
+env = gym.make("C172-AltitudeTask-NoFG-v0")
 env = Monitor(env)
 env = DummyVecEnv([lambda: env])
 
