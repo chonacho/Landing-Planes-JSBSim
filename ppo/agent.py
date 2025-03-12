@@ -11,7 +11,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 #from tasks import LandingTask
 #gym_make.main()
 
-env = gym.make("C172-HeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
+env = gym.make("C172-HeadingControlTask-Shaping.STANDARD-NoFG-v0")
 env.reset()
 
 CHECKPOINT_DIR = "train/"
@@ -38,9 +38,9 @@ class TrainAndLoggingCallback(BaseCallback):
 
         return True
 
-callback = TrainAndLoggingCallback(check_freq=1000, save_path=CHECKPOINT_DIR)
-model = PPO("MlpPolicy", env, tensorboard_log=LOG_DIR, ent_coef=0.05, learning_rate=0.01, gamma=1, verbose=1)
-model.learn(total_timesteps=10000, callback=callback, progress_bar=True, log_interval=10)
-model.save("JSBSim_10000_steps")
+callback = TrainAndLoggingCallback(check_freq=10000, save_path=CHECKPOINT_DIR)
+model = PPO("MlpPolicy", env, tensorboard_log=LOG_DIR, ent_coef=0.1, learning_rate=0.0001, gamma=0.999, verbose=1)
+model.learn(total_timesteps=100000, callback=callback, progress_bar=True, log_interval=10000)
+model.save("model")
 
 print("done")
