@@ -246,15 +246,18 @@ class LandingTask(FlightTask):
 
 class AltitudeTask(FlightTask):
     """
-    A task in which the agent must maintain a constant altitude.
+    A task in which the agent must maintain a constant altitude while keeping level flight.
     """
 
     THROTTLE_CMD = 0.8
     MIXTURE_CMD = 0.8
     DEFAULT_EPISODE_TIME_S = 60.0
     ALTITUDE_SCALING_FT = 150
+    ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
+    PITCH_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
     MIN_STATE_QUALITY = 0.0  # terminate if state 'quality' is less than this
     MAX_ALTITUDE_DEVIATION_FT = 1000  # terminate if altitude error exceeds this
+    MAX_ATTITUDE_DEG = 30  # terminate if roll or pitch exceeds this
 
     altitude_error_ft = BoundedProperty(
         "error/altitude-error-ft",
@@ -307,6 +310,22 @@ class AltitudeTask(FlightTask):
                 is_potential_based=False,
                 scaling_factor=self.ALTITUDE_SCALING_FT,
             ),
+            rewards.AsymptoticErrorComponent(
+                name="roll_error",
+                prop=prp.roll_rad,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=False,
+                scaling_factor=self.ROLL_ERROR_SCALING_RAD,
+            ),
+            rewards.AsymptoticErrorComponent(
+                name="pitch_error",
+                prop=prp.pitch_rad,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=False,
+                scaling_factor=self.PITCH_ERROR_SCALING_RAD,
+            ),
         )
         return base_components
 
@@ -323,31 +342,12 @@ class AltitudeTask(FlightTask):
                 positive_rewards=self.positive_rewards,
             )
         else:
-            pitch_stability = rewards.AsymptoticErrorComponent(
-                name="pitch_stability",
-                prop=prp.pitch_rad,
-                state_variables=self.state_variables,
-                target=0.0,
-                is_potential_based=True,
-                scaling_factor=0.15,  # approx 8 deg
+            # No additional shaping rewards needed since we already penalize attitude deviations
+            return assessors.AssessorImpl(
+                base_components,
+                shaping_components,
+                positive_rewards=self.positive_rewards,
             )
-            potential_based_components = (pitch_stability,)
-
-            if shaping is Shaping.EXTRA:
-                return assessors.AssessorImpl(
-                    base_components,
-                    potential_based_components,
-                    positive_rewards=self.positive_rewards,
-                )
-            elif shaping is Shaping.EXTRA_SEQUENTIAL:
-                altitude_error = base_components[0]
-                dependency_map = {pitch_stability: (altitude_error,)}
-                return assessors.ContinuousSequentialAssessor(
-                    base_components,
-                    potential_based_components,
-                    potential_dependency_map=dependency_map,
-                    positive_rewards=self.positive_rewards,
-                )
 
     def get_initial_conditions(self) -> Dict[Property, float]:
         extra_conditions = {
@@ -378,11 +378,21 @@ class AltitudeTask(FlightTask):
         terminal_step = sim[self.steps_left] <= 0
         state_quality = sim[self.last_assessment_reward]
         state_out_of_bounds = state_quality < self.MIN_STATE_QUALITY
-        return terminal_step or state_out_of_bounds or self._altitude_out_of_bounds(sim)
+        return (
+            terminal_step
+            or state_out_of_bounds
+            or self._altitude_out_of_bounds(sim)
+            or self._attitude_out_of_bounds(sim)
+        )
 
     def _altitude_out_of_bounds(self, sim: Simulation) -> bool:
         altitude_error_ft = sim[self.altitude_error_ft]
         return abs(altitude_error_ft) > self.MAX_ALTITUDE_DEVIATION_FT
+
+    def _attitude_out_of_bounds(self, sim: Simulation) -> bool:
+        roll_deg = math.degrees(sim[prp.roll_rad])
+        pitch_deg = math.degrees(sim[prp.pitch_rad])
+        return abs(roll_deg) > self.MAX_ATTITUDE_DEG or abs(pitch_deg) > self.MAX_ATTITUDE_DEG
 
     def _get_out_of_bounds_reward(self, sim: Simulation) -> rewards.Reward:
         """
@@ -395,7 +405,7 @@ class AltitudeTask(FlightTask):
     def _reward_terminal_override(
         self, reward: rewards.Reward, sim: Simulation
     ) -> rewards.Reward:
-        if self._altitude_out_of_bounds(sim) and not self.positive_rewards:
+        if (self._altitude_out_of_bounds(sim) or self._attitude_out_of_bounds(sim)) and not self.positive_rewards:
             return self._get_out_of_bounds_reward(sim)
         else:
             return reward
@@ -413,6 +423,7 @@ class AltitudeTask(FlightTask):
             prp.u_fps,
             prp.altitude_sl_ft,
             self.altitude_error_ft,
+            prp.roll_rad,
             prp.pitch_rad,
             self.last_agent_reward,
             self.last_assessment_reward,
