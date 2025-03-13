@@ -16,7 +16,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0", render_mode="graph")
 
 env.reset()
 model = PPO.load("model")
@@ -29,6 +29,10 @@ for episode in range(1, 6):
     total_reward = 0
     while not done:
         action, _ = model.predict(obs)
+        for i in range(20):
+            action1, _ = model.predict(obs)
+            action+= action1
+        action /=21
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
         total_reward += reward
