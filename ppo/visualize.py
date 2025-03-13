@@ -16,7 +16,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0", render_mode="graph")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
 
 env.reset()
 model = PPO.load("model")
