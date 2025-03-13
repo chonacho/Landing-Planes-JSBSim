@@ -31,7 +31,7 @@ class LandingTask(FlightTask):
     ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
     SIDESLIP_ERROR_SCALING_DEG = 3.0
     MIN_STATE_QUALITY = 0.0  # terminate if state 'quality' is less than this
-    MAX_ALTITUDE_DEVIATION_FT = 1000  # terminate if altitude error exceeds this
+    MAX_ALTITUDE_DEVIATION_FT = 500  # terminate if altitude error exceeds this
     target_track_deg = BoundedProperty(
         "target/track-deg",
         "desired heading [deg]",
@@ -63,6 +63,7 @@ class LandingTask(FlightTask):
         :param step_frequency_hz: the number of agent interaction steps per second
         :param aircraft: the aircraft used in the simulation
         """
+        self.step_frequency_hz = 0.3 #seeing if this makes the agent do less jerky movements. 
         self.max_time_s = episode_time_s
         episode_steps = math.ceil(self.max_time_s * step_frequency_hz)
         self.steps_left = BoundedProperty(
@@ -72,6 +73,7 @@ class LandingTask(FlightTask):
         self.extra_state_variables = (
             self.altitude_error_ft,
             self.track_error_deg,
+            prp.sideslip_deg,
         )
         self.state_variables = (
             FlightTask.base_state_variables + self.extra_state_variables
@@ -206,7 +208,7 @@ class LandingTask(FlightTask):
         if aircraft is out of bounds, we give the largest possible negative reward:
         as if this timestep, and every remaining timestep in the episode was -1.
         """
-        reward_scalar = (1 + sim[self.steps_left]) * -1.0
+        reward_scalar = (1 + sim[self.steps_left]) * -2.0
         return RewardStub(reward_scalar, reward_scalar)
 
     def _reward_terminal_override(
@@ -253,8 +255,9 @@ class AltitudeTask(FlightTask):
     MIXTURE_CMD = 0.8
     DEFAULT_EPISODE_TIME_S = 60.0
     ALTITUDE_SCALING_FT = 150
-    ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
-    PITCH_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
+    ROLL_ERROR_SCALING_RAD = 0.05  # approx. 8 deg
+    PITCH_ERROR_SCALING_RAD = 0.05  # approx. 8 deg
+    SIDESLIP_ERROR_SCALING_DEG = 3.0
     MIN_STATE_QUALITY = 0.0  # terminate if state 'quality' is less than this
     MAX_ALTITUDE_DEVIATION_FT = 1000  # terminate if altitude error exceeds this
     MAX_ATTITUDE_DEG = 30  # terminate if roll or pitch exceeds this
@@ -265,7 +268,7 @@ class AltitudeTask(FlightTask):
         prp.altitude_sl_ft.min,
         prp.altitude_sl_ft.max,
     )
-    action_variables = (prp.elevator_cmd, prp.throttle_cmd)
+    action_variables = (prp.aileron_cmd, prp.elevator_cmd, prp.rudder_cmd, prp.throttle_cmd)
 
     def __init__(
         self,
@@ -281,13 +284,14 @@ class AltitudeTask(FlightTask):
         :param step_frequency_hz: the number of agent interaction steps per second
         :param aircraft: the aircraft used in the simulation
         """
+        self.step_frequency_hz = 0.3
         self.max_time_s = episode_time_s
         episode_steps = math.ceil(self.max_time_s * step_frequency_hz)
         self.steps_left = BoundedProperty(
             "info/steps_left", "steps remaining in episode", 0, episode_steps
         )
         self.aircraft = aircraft
-        self.extra_state_variables = (self.altitude_error_ft,)
+        self.extra_state_variables = (self.altitude_error_ft,prp.sideslip_deg)
         self.state_variables = (
             FlightTask.base_state_variables + self.extra_state_variables
         )
@@ -318,14 +322,6 @@ class AltitudeTask(FlightTask):
                 is_potential_based=False,
                 scaling_factor=self.ROLL_ERROR_SCALING_RAD,
             ),
-            rewards.AsymptoticErrorComponent(
-                name="pitch_error",
-                prop=prp.pitch_rad,
-                state_variables=self.state_variables,
-                target=0.0,
-                is_potential_based=False,
-                scaling_factor=self.PITCH_ERROR_SCALING_RAD,
-            ),
         )
         return base_components
 
@@ -342,6 +338,48 @@ class AltitudeTask(FlightTask):
                 positive_rewards=self.positive_rewards,
             )
         else:
+            wings_level = rewards.AsymptoticErrorComponent(
+                name="wings_level",
+                prop=prp.roll_rad,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=True,
+                scaling_factor=self.ROLL_ERROR_SCALING_RAD,
+            )
+            no_sideslip = rewards.AsymptoticErrorComponent(
+                name="no_sideslip",
+                prop=prp.sideslip_deg,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=True,
+                scaling_factor=self.SIDESLIP_ERROR_SCALING_DEG,
+            )
+            pitch_error = rewards.AsymptoticErrorComponent(
+                name="pitch_error",
+                prop=prp.pitch_rad,
+                state_variables=self.state_variables,
+                target=0.0,
+                is_potential_based=True,
+                scaling_factor=self.PITCH_ERROR_SCALING_RAD,
+            )
+            potential_based_components = (wings_level, no_sideslip, pitch_error)
+
+        if shaping is Shaping.EXTRA:
+            return assessors.AssessorImpl(
+                base_components,
+                potential_based_components,
+                positive_rewards=self.positive_rewards,
+            )
+        elif shaping is Shaping.EXTRA_SEQUENTIAL:
+            altitude_error, roll_error= base_components
+            # make the wings_level shaping reward dependent on facing the correct direction
+            dependency_map = {no_sideslip: (altitude_error,), pitch_error: (altitude_error,)}
+            return assessors.ContinuousSequentialAssessor(
+                base_components,
+                potential_based_components,
+                potential_dependency_map=dependency_map,
+                positive_rewards=self.positive_rewards,
+            ) 
             # No additional shaping rewards needed since we already penalize attitude deviations
             return assessors.AssessorImpl(
                 base_components,
@@ -382,7 +420,7 @@ class AltitudeTask(FlightTask):
             terminal_step
             or state_out_of_bounds
             or self._altitude_out_of_bounds(sim)
-            or self._attitude_out_of_bounds(sim)
+            #or self._attitude_out_of_bounds(sim)
         )
 
     def _altitude_out_of_bounds(self, sim: Simulation) -> bool:

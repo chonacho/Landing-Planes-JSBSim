@@ -34,7 +34,7 @@ class CustomNetwork(BaseFeaturesExtractor):
         return self.net(observations)
 
 
-env = gym.make("C172-AltitudeTask-Shaping.STANDARD-NoFG-v0")
+env = gym.make("C172-AltitudeTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
 env = Monitor(env)
 env = DummyVecEnv([lambda: env])
 

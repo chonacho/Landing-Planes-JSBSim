@@ -16,10 +16,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-AltitudeTask-Shaping.STANDARD-FG-v0", render_mode="flightgear")
+env = gym.make("C172-AltitudeTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
 
 env.reset()
 model = PPO.load("model")
+#model = PPO.load(os.path.join("train", "best_model_200000"))
 env.render()
 
 for episode in range(1, 6):
