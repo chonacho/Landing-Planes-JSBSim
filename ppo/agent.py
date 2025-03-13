@@ -16,7 +16,7 @@ import gym_make
 from tasks import AltitudeTask, CustomHeadingControlTask, CustomTurnHeadingControlTask
 gym_make.main()
 
-env = gym.make("C172-AltitudeTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
 env = Monitor(env)
 env = DummyVecEnv([lambda: env])
 
@@ -43,14 +43,14 @@ class TrainAndLoggingCallback(BaseCallback):
 
 policy_kwargs = dict(
     net_arch=dict(pi=[256, 256], vf=[256, 256]),
-    activation_fn=nn.Sigmoid
+    activation_fn=nn.ReLU
 )
 model = PPO(
     "MlpPolicy",
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,
-    learning_rate=1e-3,
+    learning_rate=1e-5,
     gamma=0.99,
     gae_lambda=0.95,
     clip_range=0.2,
@@ -59,7 +59,7 @@ model = PPO(
 )
 callback = TrainAndLoggingCallback(check_freq=100000, save_path=CHECKPOINT_DIR)
 
-model.learn(total_timesteps=500000, callback=callback, progress_bar=True, log_interval=100000)
+model.learn(total_timesteps=10000000, callback=callback, progress_bar=True, log_interval=100000)
 model.save("model")
 
 print("done")
