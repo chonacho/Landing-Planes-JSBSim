@@ -22,7 +22,7 @@ max_rewards = []
 avg_rewards = []
 
 # Iterate over each model file in the directory
-for model_num in range(100000, 1000001, 100000):
+for model_num in range(100000, 10000001, 100000):
     model_path = os.path.join(MODEL_DIR, f"{MODEL_PREFIX}{model_num}")
     if os.path.exists(model_path):
         # Load the model
