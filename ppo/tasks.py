@@ -600,7 +600,7 @@ class CustomHeadingControlTask(FlightTask):
         elif shaping is Shaping.EXTRA_SEQUENTIAL:
             altitude_error, travel_direction = base_components
             # make the wings_level shaping reward dependent on facing the correct direction
-            dependency_map = {wings_level: (travel_direction,)}
+            dependency_map = {wings_level: (travel_direction,), no_sideslip: (altitude_error,)}
             return assessors.ContinuousSequentialAssessor(
                 base_components,
                 potential_based_components,
