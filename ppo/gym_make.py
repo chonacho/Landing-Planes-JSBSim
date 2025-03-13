@@ -26,7 +26,7 @@ def get_env_id_kwargs_map() -> Dict[str, Tuple]:
     from tasks import LandingTask, AltitudeTask
 
     map = {}
-    for task_type in [LandingTask, AltitudeTask]:
+    for task_type in [LandingTask, AltitudeTask, CustomHeadingControlTask, CustomTurnHeadingControlTask]:
         for plane in [c172]:
             for shaping in (Shaping.STANDARD, Shaping.EXTRA, Shaping.EXTRA_SEQUENTIAL):
                 for enable_flightgear in (True, False):
