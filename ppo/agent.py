@@ -16,24 +16,6 @@ import gym_make
 from tasks import AltitudeTask
 gym_make.main()
 
-class CustomNetwork(BaseFeaturesExtractor):
-    def __init__(self, observation_space, features_dim=256):
-        super().__init__(observation_space, features_dim)
-        n_input = int(np.prod(observation_space.shape))
-
-        self.net = nn.Sequential(
-            nn.Linear(n_input, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, features_dim),
-            nn.ReLU(),
-        )
-
-    def forward(self, observations):
-        return self.net(observations)
-
-
 env = gym.make("C172-AltitudeTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
 env = Monitor(env)
 env = DummyVecEnv([lambda: env])
@@ -60,26 +42,22 @@ class TrainAndLoggingCallback(BaseCallback):
         return True
 
 policy_kwargs = dict(
-    features_extractor_class=CustomNetwork,
-    features_extractor_kwargs=dict(features_dim=256),
     net_arch=dict(pi=[256, 256], vf=[256, 256]),
-    activation_fn=nn.ReLU,
+    activation_fn=nn.Sigmoid
 )
-
-callback = TrainAndLoggingCallback(check_freq=100000, save_path=CHECKPOINT_DIR)
-
 model = PPO(
     "MlpPolicy",
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,
-    learning_rate=1e-2,
+    learning_rate=1e-3,
     gamma=0.99,
     gae_lambda=0.95,
-    clip_range=0.05,
+    clip_range=0.2,
     ent_coef=0.01,
     verbose=1
 )
+callback = TrainAndLoggingCallback(check_freq=100000, save_path=CHECKPOINT_DIR)
 
 model.learn(total_timesteps=500000, callback=callback, progress_bar=True, log_interval=100000)
 model.save("model")
