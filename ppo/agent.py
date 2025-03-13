@@ -13,7 +13,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 import gym_make
-from tasks import AltitudeTask
+from tasks import AltitudeTask, CustomHeadingControlTask, CustomTurnHeadingControlTask
 gym_make.main()
 
 class CustomNetwork(BaseFeaturesExtractor):
@@ -34,7 +34,7 @@ class CustomNetwork(BaseFeaturesExtractor):
         return self.net(observations)
 
 
-env = gym.make("C172-AltitudeTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
 env = Monitor(env)
 env = DummyVecEnv([lambda: env])
 
