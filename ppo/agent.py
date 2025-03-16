@@ -7,7 +7,9 @@ from torch import nn
 import numpy as np
 from jsbgym.tests.stubs import FlightTaskStub
 from stable_baselines3 import PPO
+from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -39,14 +41,17 @@ class TrainAndLoggingCallback(BaseCallback):
                 self.save_path, "best_model_{}".format(self.n_calls)
             )
             self.model.save(model_path)
+            vec_env = self.model.get_env()
+            mean_reward, std_reward = evaluate_policy(self.model, vec_env, deterministic=False, n_eval_episodes=5, warn=False)
+            print(f"{mean_reward} std: {std_reward} ")
         return True
 
 policy_kwargs = dict(
     net_arch=dict(pi=[256, 256], vf=[256, 256]),
     activation_fn=nn.ReLU
 )
-model = PPO(
-    "MlpPolicy",
+model = RecurrentPPO(
+    "MlpLstmPolicy",
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,

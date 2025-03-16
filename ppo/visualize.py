@@ -5,10 +5,24 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
+import numpy as np
+import tensorflow as tf
+import torch
 from gym.wrappers import HumanRendering
 import gym_make
 from tasks import AltitudeTask
 gym_make.main()
+from stable_baselines3.common.policies import obs_as_tensor
+
+def predict_proba(model, state):
+    obs = model.policy.obs_to_tensor(state)[0]
+    dis = model.policy.get_distribution(obs)
+    #print(dis)
+    probs = dis.distribution.mean
+    std_np = dis.distribution.stddev.detach().numpy()
+    probs_np = probs.detach().numpy()
+
+    return np.divide(probs_np, std_np)
 
 # Weird necessary fix
 from jsbgym import visualiser
@@ -16,7 +30,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="graph")
 
 env.reset()
 model = PPO.load("model")
@@ -31,11 +45,16 @@ while True:
     total_reward = 0
     while not done:
         action, _ = model.predict(obs)
-        for i in range(30):
-            action1, _ = model.predict(obs)
-            action+= action1
-        action /=31
+        #print(action)
+        #for i in range(30):
+        #    action1, _ = model.predict(obs)
+        #    action+= action1
+        #action /=31
+        action = np.clip(predict_proba(model, obs)[0], min=-1, max=1)
+        #print(action)
         obs, reward, terminated, truncated, info = env.step(action)
+        #print(obs[0])
+        #print(model.action_probability(obs))
         done = terminated or truncated
         total_reward += reward
     print(f"Total Reward for episode {episode} is {total_reward}")
