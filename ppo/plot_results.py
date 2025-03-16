@@ -22,18 +22,23 @@ max_rewards = []
 avg_rewards = []
 
 # Iterate over each model file in the directory
-for model_num in range(100000, 10000001, 100000):
-    model_path = os.path.join(MODEL_DIR, f"{MODEL_PREFIX}{model_num}")
-    if os.path.exists(model_path):
+#for model_num in range(00000, 1000001, 500000):
+if True:
+    
+    #rint(model_num)
+    #model_path = os.path.join(MODEL_DIR, f"{MODEL_PREFIX}{model_num}")
+    model_path = ""
+    if True:#os.path.exists(model_path):
         # Load the model
+        print(model_path)
         model = PPO.load(model_path)
         
         # Evaluate the model across 10 different seeds
         rewards = []
         env = gym.make(ENV_NAME)
-        for seed in range(10):
-            env.seed(seed)
-            obs = env.reset()
+        for seed in range(3):
+            #env.seed(seed)
+            obs,_ = env.reset()
             episode_reward = 0
             done = False
             while not done:
@@ -42,8 +47,10 @@ for model_num in range(100000, 10000001, 100000):
                     action1, _ = model.predict(obs)
                     action += action1
                 action /= 21
-                obs, reward, done, info = env.step(action)
+                obs, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
                 episode_reward += reward
+            print(epsiode_reward)
             rewards.append(episode_reward)
         
         # Calculate statistics

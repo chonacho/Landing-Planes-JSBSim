@@ -483,7 +483,7 @@ class CustomHeadingControlTask(FlightTask):
     ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
     SIDESLIP_ERROR_SCALING_DEG = 3.0
     MIN_STATE_QUALITY = 0.0  # terminate if state 'quality' is less than this
-    MAX_ALTITUDE_DEVIATION_FT = 1000  # terminate if altitude error exceeds this
+    MAX_ALTITUDE_DEVIATION_FT = 3000  # terminate if altitude error exceeds this
     target_track_deg = BoundedProperty(
         "target/track-deg",
         "desired heading [deg]",
@@ -712,7 +712,7 @@ class CustomTurnHeadingControlTask(CustomHeadingControlTask):
         return initial_conditions
 
     def _get_target_altitude(self) -> float:
-        return self.INITIAL_ALTITUDE_FT+ random.uniform(-200, 200)
+        return self.INITIAL_ALTITUDE_FT+ random.uniform(-1000, 1000)
 
     def _get_target_track(self) -> float:
         # select a random heading each episode

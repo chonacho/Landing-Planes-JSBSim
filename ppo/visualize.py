@@ -5,7 +5,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
-
+from gym.wrappers import HumanRendering
 import gym_make
 from tasks import AltitudeTask
 gym_make.main()
@@ -23,18 +23,21 @@ model = PPO.load("model")
 #model = PPO.load(os.path.join("train", "best_model_200000"))
 env.render()
 
-for episode in range(1, 6):
+#for episode in range(1, 6):
+episode = 0
+while True:
     obs, _ = env.reset()
     done = False
     total_reward = 0
     while not done:
         action, _ = model.predict(obs)
-        for i in range(20):
+        for i in range(30):
             action1, _ = model.predict(obs)
             action+= action1
-        action /=21
+        action /=31
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
         total_reward += reward
     print(f"Total Reward for episode {episode} is {total_reward}")
+    episode+=1
 env.close()
