@@ -73,7 +73,7 @@ model = PPO(
 )
 callback = TrainAndLoggingCallback(check_freq=100000, save_path=CHECKPOINT_DIR)
 
-model.learn(total_timesteps=3000000, callback=callback, progress_bar=True, log_interval=100000)
+model.learn(total_timesteps=10000000, callback=callback, progress_bar=True, log_interval=100000)
 model.save("model")
 
 print("done")

@@ -63,7 +63,7 @@ class LandingTask(FlightTask):
         :param step_frequency_hz: the number of agent interaction steps per second
         :param aircraft: the aircraft used in the simulation
         """
-        self.step_frequency_hz = 0.3 #seeing if this makes the agent do less jerky movements. 
+        self.step_frequency_hz = 0.3 #seeing if this makes the agent do less jerky movements.
         self.max_time_s = episode_time_s
         episode_steps = math.ceil(self.max_time_s * step_frequency_hz)
         self.steps_left = BoundedProperty(
@@ -379,7 +379,7 @@ class AltitudeTask(FlightTask):
                 potential_based_components,
                 potential_dependency_map=dependency_map,
                 positive_rewards=self.positive_rewards,
-            ) 
+            )
             # No additional shaping rewards needed since we already penalize attitude deviations
             return assessors.AssessorImpl(
                 base_components,
@@ -478,7 +478,7 @@ class CustomHeadingControlTask(FlightTask):
     MIXTURE_CMD = 0.8
     INITIAL_HEADING_DEG = 270
     DEFAULT_EPISODE_TIME_S = 60.0
-    ALTITUDE_SCALING_FT = 40
+    ALTITUDE_SCALING_FT = 100
     TRACK_ERROR_SCALING_DEG = 8
     ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
     SIDESLIP_ERROR_SCALING_DEG = 3.0
