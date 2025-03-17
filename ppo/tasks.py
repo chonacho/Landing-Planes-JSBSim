@@ -474,11 +474,11 @@ class CustomHeadingControlTask(FlightTask):
     initial heading.
     """
 
-    THROTTLE_CMD = 0.8
+    THROTTLE_CMD = 0.7
     MIXTURE_CMD = 0.8
     INITIAL_HEADING_DEG = 270
     DEFAULT_EPISODE_TIME_S = 60.0
-    ALTITUDE_SCALING_FT = 150
+    ALTITUDE_SCALING_FT = 40
     TRACK_ERROR_SCALING_DEG = 8
     ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
     SIDESLIP_ERROR_SCALING_DEG = 3.0

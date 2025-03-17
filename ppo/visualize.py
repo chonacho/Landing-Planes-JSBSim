@@ -32,7 +32,7 @@ visualiser.gym.logger = logging.getLogger('jsbgym')
 env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
 
 env.reset()
-model = RecurrentPPO.load("model")
+model = PPO.load("model")
 #model = PPO.load(os.path.join("train", "best_model_200000"))
 env.render()
 
@@ -42,15 +42,15 @@ while True:
     obs, _ = env.reset()
     done = False
     total_reward = 0
-    lstm_states = None
+    #lstm_states = None
     while not done:
-        action, lstm_states = model.predict(obs, lstm_states)
+        #action, _ = model.predict(obs)
         #print(action)
         #for i in range(30):
         #    action1, _ = model.predict(obs)
         #    action+= action1
         #action /=31
-        # action = np.clip(predict_proba(model, obs, lstm_states, episode_starts)[0], min=-1, max=1)
+        action = np.clip(predict_proba(model, obs, lstm_states, episode_starts)[0], min=-1, max=1)
         #print(action)
         obs, reward, terminated, truncated, info = env.step(action)
         #print(obs[0])
