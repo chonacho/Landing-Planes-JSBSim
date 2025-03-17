@@ -43,9 +43,8 @@ while True:
     done = False
     total_reward = 0
     lstm_states = None
-    episode_starts = np.ones((1,))
     while not done:
-        action, lstm_states = model.predict(obs, lstm_states, episode_starts)
+        action, lstm_states = model.predict(obs, lstm_states)
         #print(action)
         #for i in range(30):
         #    action1, _ = model.predict(obs)
