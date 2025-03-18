@@ -13,14 +13,16 @@ from tasks import AltitudeTask
 gym_make.main()
 from stable_baselines3.common.policies import obs_as_tensor
 
-def predict_proba(model, state, lstm_states, episode_starts):
+def predict_proba(model, state):
     obs = model.policy.obs_to_tensor(state)[0]
-    dis = model.policy.get_distribution(obs, lstm_states, episode_starts)
+    dis = model.policy.get_distribution(obs)
     #print(dis)
     probs = dis.distribution.mean
     std_np = dis.distribution.stddev.detach().numpy()
     probs_np = probs.detach().numpy()
-
+    print(probs_np)
+    print(std_np)
+    print(np.divide(probs_np,std_np))
     return np.divide(probs_np, std_np)
 
 # Weird necessary fix
@@ -29,11 +31,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="human")
 
 env.reset()
-model = PPO.load("model")
-#model = PPO.load(os.path.join("train", "best_model_200000"))
+#model = PPO.load("model")
+model = PPO.load(os.path.join("train", "best_model_1200000"))
 env.render()
 
 #for episode in range(1, 6):
@@ -50,7 +52,7 @@ while True:
         #    action1, _ = model.predict(obs)
         #    action+= action1
         #action /=31
-        action = np.clip(predict_proba(model, obs, lstm_states, episode_starts)[0], min=-1, max=1)
+        action = np.clip(predict_proba(model, obs)[0], min=-1, max=1)
         #print(action)
         obs, reward, terminated, truncated, info = env.step(action)
         #print(obs[0])

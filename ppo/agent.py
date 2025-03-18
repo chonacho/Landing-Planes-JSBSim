@@ -23,7 +23,7 @@ env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-
 env = Monitor(env)
 #env = VecFrameStack(env,8)
 env = DummyVecEnv([lambda: env])
-#env = VecNormalize(env, gamma=0.99)
+env = VecNormalize(env, gamma=0.99)
 
 
 
@@ -85,14 +85,14 @@ model = PPO(
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,
-    learning_rate=linear_schedule(3e-3),
+    learning_rate=linear_schedule(3e-5),
     gamma=0.99,
     gae_lambda=0.9,
-    batch_size= 256,
+    batch_size=64,
     max_grad_norm=2,
     n_epochs=5,
     clip_range=0.2,
-    ent_coef=0.003,
+    ent_coef=0.01,
     vf_coef=0.4,
     verbose=1
 )

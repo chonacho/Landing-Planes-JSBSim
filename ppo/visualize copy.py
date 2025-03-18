@@ -31,10 +31,10 @@ for ii in range(10):
     total_reward = 0
     while not done:
         action, _ = model.predict(obs)
-        for i in range(0):
+        for i in range(20):
             action1, _ = model.predict(obs)
             action+= action1
-        action /=1
+        action /=21
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
         total_reward += reward
