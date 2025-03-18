@@ -31,7 +31,7 @@ class LandingTask(FlightTask):
     ROLL_ERROR_SCALING_RAD = 0.15  # approx. 8 deg
     SIDESLIP_ERROR_SCALING_DEG = 3.0
     MIN_STATE_QUALITY = 0.0  # terminate if state 'quality' is less than this
-    MAX_ALTITUDE_DEVIATION_FT = 500  # terminate if altitude error exceeds this
+    MAX_ALTITUDE_DEVIATION_FT = 3000  # terminate if altitude error exceeds this
     target_track_deg = BoundedProperty(
         "target/track-deg",
         "desired heading [deg]",
@@ -44,8 +44,8 @@ class LandingTask(FlightTask):
     altitude_error_ft = BoundedProperty(
         "error/altitude-error-ft",
         "error to desired altitude [ft]",
-        prp.altitude_sl_ft.min,
-        prp.altitude_sl_ft.max,
+        -MAX_ALTITUDE_DEVIATION_FT,
+        MAX_ALTITUDE_DEVIATION_FT,
     )
     action_variables = (prp.aileron_cmd, prp.elevator_cmd, prp.rudder_cmd, prp.throttle_cmd)
 
@@ -474,9 +474,10 @@ class CustomHeadingControlTask(FlightTask):
     initial heading.
     """
 
-    THROTTLE_CMD = 0.7
+    THROTTLE_CMD = 0.8
     MIXTURE_CMD = 0.8
     INITIAL_HEADING_DEG = 270
+    INITIAL_ALTITUDE_FT=5000
     DEFAULT_EPISODE_TIME_S = 60.0
     ALTITUDE_SCALING_FT = 100
     TRACK_ERROR_SCALING_DEG = 8
@@ -493,8 +494,8 @@ class CustomHeadingControlTask(FlightTask):
     target_altitude_ft = BoundedProperty(
         "target/altitude-ft",
         "desired altitude [ft]",
-        prp.altitude_sl_ft.min,
-        prp.altitude_sl_ft.max,
+        INITIAL_ALTITUDE_FT-1000,
+        INITIAL_ALTITUDE_FT+1000,
     )
 
     track_error_deg = BoundedProperty(
@@ -503,8 +504,8 @@ class CustomHeadingControlTask(FlightTask):
     altitude_error_ft = BoundedProperty(
         "error/altitude-error-ft",
         "error to desired altitude [ft]",
-        prp.altitude_sl_ft.min,
-        prp.altitude_sl_ft.max,
+        -MAX_ALTITUDE_DEVIATION_FT,
+        MAX_ALTITUDE_DEVIATION_FT,
     )
     action_variables = (prp.aileron_cmd, prp.elevator_cmd, prp.rudder_cmd)
 
