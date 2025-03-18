@@ -12,14 +12,15 @@ import gym_make
 from tasks import AltitudeTask
 gym_make.main()
 from stable_baselines3.common.policies import obs_as_tensor
+from stable_baselines3.common.evaluation import evaluate_policy
 
 def predict_proba(model, state):
     obs = model.policy.obs_to_tensor(state)[0]
     dis = model.policy.get_distribution(obs)
     #print(dis)
     probs = dis.distribution.mean
-    std_np = dis.distribution.stddev.detach().numpy()
-    probs_np = probs.detach().numpy()
+    std_np = dis.distribution.stddev.cpu().detach().numpy()
+    probs_np = probs.cpu().detach().numpy()
     print(probs_np)
     print(std_np)
     print(np.divide(probs_np,std_np))
@@ -31,11 +32,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="human")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
 
 env.reset()
-#model = PPO.load("model")
-model = PPO.load(os.path.join("train", "best_model_1200000"))
+model = PPO.load("model")
+# model = PPO.load(os.path.join("train", "best_model_1200000"))
 env.render()
 
 #for episode in range(1, 6):
@@ -45,8 +46,11 @@ while True:
     done = False
     total_reward = 0
     #lstm_states = None
+    mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, n_eval_episodes=1, warn=False)
     while not done:
-        #action, _ = model.predict(obs)
+        mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, n_eval_episodes=5, warn=False)
+        print(f"{mean_reward} std: {std_reward}")
+        # action, _ = model.predict(obs)
         #print(action)
         #for i in range(30):
         #    action1, _ = model.predict(obs)
