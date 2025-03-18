@@ -291,7 +291,7 @@ class AltitudeTask(FlightTask):
             "info/steps_left", "steps remaining in episode", 0, episode_steps
         )
         self.aircraft = aircraft
-        self.extra_state_variables = (self.altitude_error_ft,prp.sideslip_deg)
+        self.extra_state_variables = (self.altitude_error_ft, prp.sideslip_deg)
         self.state_variables = (
             FlightTask.base_state_variables + self.extra_state_variables
         )
@@ -490,6 +490,13 @@ class CustomHeadingControlTask(FlightTask):
         prp.heading_deg.min,
         prp.heading_deg.max,
     )
+    target_altitude_ft = BoundedProperty(
+        "target/altitude-ft",
+        "desired altitude [ft]",
+        prp.altitude_sl_ft.min,
+        prp.altitude_sl_ft.max,
+    )
+
     track_error_deg = BoundedProperty(
         "error/track-error-deg", "error to desired track [deg]", -180, 180
     )
