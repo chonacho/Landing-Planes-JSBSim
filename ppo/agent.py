@@ -85,7 +85,7 @@ model = PPO(
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,
-    learning_rate=linear_schedule(0.003),
+    learning_rate=linear_schedule(3e-5),
     gamma=0.99,
     gae_lambda=0.9,
     batch_size= 64,
