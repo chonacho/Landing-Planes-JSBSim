@@ -16,11 +16,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0", render_mode="graph")
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0", render_mode="human")
 
 env.reset()
 #model = PPO.load("model")
-model = PPO.load(os.path.join("train", "best_model_200000"))
+model = PPO.load(os.path.join("train", "best_model_1000000"))
 env.render()
 
 #for episode in range(1, 6):
