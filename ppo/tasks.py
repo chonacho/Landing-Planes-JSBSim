@@ -635,7 +635,7 @@ class CustomHeadingControlTask(FlightTask):
 
     def _update_altitude_error(self, sim: Simulation):
         altitude_ft = sim[prp.altitude_sl_ft]
-        target_altitude_ft = self._get_target_altitude()
+        target_altitude_ft = sim[self.target_altitude_ft]
         error_ft = altitude_ft - target_altitude_ft
         sim[self.altitude_error_ft] = error_ft
 
@@ -676,6 +676,7 @@ class CustomHeadingControlTask(FlightTask):
         sim.set_throttle_mixture_controls(self.THROTTLE_CMD, self.MIXTURE_CMD)
         sim[self.steps_left] = self.steps_left.max
         sim[self.target_track_deg] = self._get_target_track()
+        sim[self.target_altitude_ft] = self._get_target_altitude()
 
     def _get_target_track(self) -> float:
         # use the same, initial heading every episode
@@ -688,6 +689,7 @@ class CustomHeadingControlTask(FlightTask):
         return (
             prp.u_fps,
             prp.altitude_sl_ft,
+            self.target_altitude_ft,
             self.altitude_error_ft,
             self.target_track_deg,
             self.track_error_deg,
