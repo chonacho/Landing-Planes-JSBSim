@@ -3,10 +3,12 @@ import jsbgym
 import importlib
 import os
 import torch as th
+from typing import Callable
 from torch import nn
 import numpy as np
 from jsbgym.tests.stubs import FlightTaskStub
 from stable_baselines3 import PPO
+#from sbx import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
@@ -21,7 +23,7 @@ env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-
 env = Monitor(env)
 #env = VecFrameStack(env,8)
 env = DummyVecEnv([lambda: env])
-env = VecNormalize(env, gamma=0.99)
+#env = VecNormalize(env, gamma=0.99)
 
 
 
@@ -55,13 +57,36 @@ policy_kwargs = dict(
     ortho_init=False,
     activation_fn=nn.ReLU
 )
+
+
+
+def linear_schedule(initial_value: float) -> Callable[[float], float]:
+    """
+    Linear learning rate schedule.
+
+    :param initial_value: Initial learning rate.
+    :return: schedule that computes
+      current learning rate depending on remaining progress
+    """
+    def func(progress_remaining: float) -> float:
+        """
+        Progress will decrease from 1 (beginning) to 0.
+
+        :param progress_remaining:
+        :return: current learning rate
+        """
+        return progress_remaining * initial_value
+
+    return func
+
+
 model = PPO(
     "MlpPolicy",
     env,
     policy_kwargs=policy_kwargs,
     tensorboard_log=LOG_DIR,
-    learning_rate=3.5e-5,
-    gamma=0.95,
+    learning_rate=linear_schedule(0.003),
+    gamma=0.99,
     gae_lambda=0.9,
     batch_size= 64,
     max_grad_norm=2,
