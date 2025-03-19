@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 import gym_make
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack, VecNormalize
 from tasks import AltitudeTask
 gym_make.main()
 # Custom gym environment
@@ -24,13 +27,28 @@ avg_rewards = []
 # Iterate over each model file in the directory
 for model_num in range(100000, 10000001, 100000):
     model_path = os.path.join(MODEL_DIR, f"{MODEL_PREFIX}{model_num}")
+    stat_path = os.path.join("normstats", f"model_{model_num}.pkl")
     print(model_path)
     # Load the model
-    model = PPO.load(model_path)
+
 
     # Evaluate the model across 10 different seeds
     rewards = []
     env = gym.make(ENV_NAME)
+    model = PPO.load(model_path)
+    env = Monitor(env, allow_early_resets=True)
+    env = DummyVecEnv([lambda: env])
+
+    try:
+        #env = VecNormalize(env, gamma=0.99, training=False, norm_reward=False)
+        env = VecNormalize.load(stat_path, env)
+        env.training = False
+    except:
+        env = VecNormalize(env, gamma=0.99, training=False, norm_reward=False)
+    env.reset()
+    rewards, lens = evaluate_policy(model, env, deterministic=False, n_eval_episodes=15, warn=False, return_episode_rewards=True)
+    print(rewards)
+    """
     for seed in range(10):
         # env.seed(seed)
         obs, _ = env.reset()
@@ -45,7 +63,7 @@ for model_num in range(100000, 10000001, 100000):
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             episode_reward += reward
-        rewards.append(episode_reward)
+        rewards.append(episode_reward)"""
 
     # Calculate statistics
     min_reward = np.min(rewards)
@@ -64,7 +82,7 @@ plt.plot(model_numbers, max_rewards, label='Max Reward')
 plt.plot(model_numbers, avg_rewards, label='Avg Reward')
 plt.xlabel('Model Number')
 plt.ylabel('Reward')
-plt.ylim(0, 100)  # Set y-axis limits from 0 to 100
+plt.ylim(0, 150)  # Set y-axis limits from 0 to 100
 plt.legend()
 plt.title('Evaluation of Models')
 plt.grid()

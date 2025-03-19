@@ -4,8 +4,9 @@ import os
 from stable_baselines3 import PPO
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
+from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack, VecNormalize
 import numpy as np
 import torch
 import gym_make
@@ -31,21 +32,27 @@ import logging
 logging.basicConfig(level=logging.INFO)
 visualiser.gym.logger = logging.getLogger('jsbgym')
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="human")
-
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-FG-v0", render_mode="flightgear")
+env = DummyVecEnv([lambda: env])
+env = VecNormalize.load("normstats/model_9900000.pkl", env)
+env.training = False
 env.reset()
-#model = PPO.load("model")
-model = PPO.load(os.path.join("train", "best_model_1200000"))
+#model = PPO.load("", env)
+model = PPO.load(os.path.join("train", "best_model_9900000"))
 env.render()
 
 #for episode in range(1, 6):
 episode = 0
 while True:
-    obs, _ = env.reset()
+    obs = env.reset()
     done = False
     total_reward = 0
     #lstm_states = None
-    while not done:
+    mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, n_eval_episodes=1, warn=False)
+    print(env.get_original_reward())
+    while False: #not done:
+        mean_reward, std_reward = evaluate_policy(model, env, deterministic=True, n_eval_episodes=5, warn=False)
+        print(f"{mean_reward} std: {std_reward} ")
         #action, _ = model.predict(obs)
         #print(action)
         #for i in range(30):
@@ -59,6 +66,6 @@ while True:
         #print(model.action_probability(obs))
         done = terminated or truncated
         total_reward += reward
-    print(f"Total Reward for episode {episode} is {total_reward}")
+    print(f"Total Reward for episode {episode} is {mean_reward}")
     episode+=1
 env.close()

@@ -19,14 +19,14 @@ import gym_make
 from tasks import AltitudeTask, CustomHeadingControlTask, CustomTurnHeadingControlTask
 gym_make.main()
 
-env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
-env = Monitor(env)
-#env = VecFrameStack(env,8)
-env = DummyVecEnv([lambda: env])
-env = VecNormalize.load("normstats/model_5000000.pkl",env)
-#env = VecNormalize(env, gamma=0.99)
+MODEL_DIR = "train"
+
+# Model naming pattern
+MODEL_PREFIX = "best_model_"
 
 
+
+ENV_NAME = "C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0"
 
 CHECKPOINT_DIR = "train/"
 NORM_DIR = "normstats/"
@@ -45,11 +45,11 @@ class TrainAndLoggingCallback(BaseCallback):
     def _on_step(self):
         if self.n_calls % self.check_freq == 0:
             model_path = os.path.join(
-                self.save_path, "best_model_{}".format(self.n_calls+5000000)
+                self.save_path, "best_model_{}".format(self.n_calls)
             )
             self.model.save(model_path)
             vec_env = self.model.get_env()
-            vec_env.save(os.path.join(NORM_DIR, "model_{}.pkl".format(self.n_calls+5000000)))
+            vec_env.save(os.path.join(NORM_DIR, "model_{}.pkl".format(self.n_calls)))
             mean_reward, std_reward = evaluate_policy(self.model, vec_env, deterministic=True, n_eval_episodes=5, warn=False)
             print(f"{mean_reward} std: {std_reward} ")
         return True
@@ -82,29 +82,54 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 
     return func
 
-"""
-model = PPO(
-    "MlpPolicy",
-    env,
-    policy_kwargs=policy_kwargs,
-    tensorboard_log=LOG_DIR,
-    learning_rate=linear_schedule(3e-4),
-    gamma=0.99,
-    gae_lambda=0.9,
-    batch_size=128,
-    max_grad_norm=2,
-    n_epochs=5,
-    clip_range=0.2,
-    ent_coef=0.01,
-    vf_coef=0.4,
-    verbose=1
-)"""
-model = PPO.load("model", env)
-#model.learning_rate = linear_schedule(3e-4)
+env = gym.make("C172-CustomTurnHeadingControlTask-Shaping.EXTRA_SEQUENTIAL-NoFG-v0")
+env = Monitor(env)
+#env = VecFrameStack(env,8)
+env = DummyVecEnv([lambda: env])
+env = VecNormalize(env, gamma=0.99)
 
 callback = TrainAndLoggingCallback(check_freq=100000, save_path=CHECKPOINT_DIR)
+for model_num in range(100000, 10000001, 100000):
+    model_path = os.path.join(MODEL_DIR, f"{MODEL_PREFIX}{model_num}")
+    stat_path = os.path.join("normstats", f"model_{model_num}.pkl")
+    print(model_path)
+    # Load the model
 
-model.learn(total_timesteps=5000000, callback=callback, progress_bar=True, log_interval=100000)
-model.save("model")
+
+    # Evaluate the model across 10 different seeds
+    rewards = []
+    env = gym.make(ENV_NAME)
+    env = Monitor(env, allow_early_resets=True)
+    env = DummyVecEnv([lambda: env])
+    try:
+        env = VecNormalize.load(stat_path, env)
+    except:
+        env = VecNormalize(env, gamma=0.99, training=True, norm_reward=False)
+    """
+    model = PPO(
+    "MlpPolicy",
+        env,
+        policy_kwargs=policy_kwargs,
+        #tensorboard_log=LOG_DIR,
+        learning_rate=3e-5,
+        gamma=0.99,
+        gae_lambda=0.9,
+        batch_size=256,
+        max_grad_norm=2,
+        n_epochs=5,
+        clip_range=0.2,
+        ent_coef=0.01,
+        vf_coef=0.4,
+        verbose=1
+    )"""
+    model = PPO.load(model_path, env)
+    env.reset()
+    model.learn(total_timesteps=10000, progress_bar=True, log_interval=100000)
+    rewards, lens = evaluate_policy(model, env, deterministic=True, n_eval_episodes=5, warn=False)
+    print(rewards)
+    env.save(os.path.join(NORM_DIR, "model_{}.pkl".format(model_num)))
+
+#model.save("model")
 
 print("done")
+
